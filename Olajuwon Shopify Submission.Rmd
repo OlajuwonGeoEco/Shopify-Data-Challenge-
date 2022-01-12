@@ -1,0 +1,110 @@
+---
+title: "Shopify Challenge"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+Reading the data I prefer file.choose(), where I can manually select the data into the console
+```{r}
+shopify_data<-read.csv(file.choose(), header=T)
+```
+
+Let's see what the data looks like
+
+```{r}
+head(shopify_data,10)
+tail(shopify_data,10)
+```
+
+Loading my data wrangling and visualization libraries
+```{r}
+library("tidyverse")
+library("ggplot2")
+```
+Quick look up of shopify data set summary
+
+```{r}
+summary(shopify_data)
+```
+Something quicky stands out to me that the mean order_amount was used as the average order value. Doesn't seem right to me but I'd have to investigate what average order value means or represents.
+
+Visited this link https://www.shopify.com/blog/average-order-value#averageorder and they defined average order value as Revenue/orders. 
+
+Problem solved. 
+
+Time to calculate the actual AOV. 
+
+Q1. A better way to evaluate this data is by adding the order amount
+
+I almost used base R to quickly solve the AOV shopify_AOV<- (sum(shopify_data$order_amount))/(sum(shopify_data$total_items)) but I looked back at the head() and discovered that some shop_id are repeated on the sheet.!
+
+Quick view of how many shops we have.
+
+```{r}
+shops <- group_by(shopify_data, shop_id)
+
+summarise(shops,n= n()) %>% 
+  arrange (desc(n))
+```
+
+
+Time to use dplyr, lot of shift ctrl M :)
+```{r}
+shopify_data %>% 
+  group_by(shop_id) %>% 
+  summarise (shopify_AOV= sum(order_amount)/sum(total_items)) %>% 
+  summarise (mean(shopify_AOV))
+
+
+```
+Time for some data VIZ, pictures tell a thousand words time to see what's going on per shop
+
+```{r}
+ggplot(shopify_data)+
+  geom_jitter(aes(order_amount,total_items, size=total_items))+
+  scale_color_gradient(low="orange", high="purple")+
+  theme_classic()+
+  labs(title = "total items VS order amount",x="order_amount",y= "total_items") 
+```
+
+
+I'd take a minute to pause and recondsider using the mean as a measure of central tendency!!! That's a huge outlier!!!!
+
+I honestly should have visualized and done some data inspection at the start. I'd use the median.
+
+
+```{r}
+shopify_data %>% 
+  group_by(shop_id) %>% 
+  summarise (shopify_AOV= sum(order_amount)/sum(total_items)) %>% 
+  summarise (median(shopify_AOV))
+```
+
+The value i'll report is 153, also I notify the team about this outlier. Which can be found by using arrange(desc())
+
+
+```
+
